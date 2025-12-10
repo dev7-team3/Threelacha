@@ -1,0 +1,26 @@
+.env
+
+# Python packaging
+*.egg-info/
+build/
+dist/
+__pycache__/
+*.pyc
+*.pyo
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+!*.code-workspace
+
+# Built Visual Studio Code Extensions
+*.vsix
+
+*.session
+
+CLAUDE.md
+
+.pytest_cache/
+.venv/
