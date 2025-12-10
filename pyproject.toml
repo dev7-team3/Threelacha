@@ -1,0 +1,105 @@
+[project]
+name = "threelacha"
+version = "0.1.0"
+description = "농수산물 api를 사용한 데이터 파이프라인 및 대시보드"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14.8",
+]
+
+[tool.ruff]
+exclude = [
+    ".bzr", ".direnv", ".eggs", ".git", ".git-rewrite", ".hg", ".ipynb_checkpoints",
+    ".mypy_cache", ".nox", ".pants.d", ".pyenv", ".pytest_cache", ".pytype",
+    ".ruff_cache", ".svn", ".tox", ".venv", ".vscode", "__pypackages__",
+    "_build", "buck-out", "build", "dist", "node_modules", "site-packages", "venv"
+]
+# Same as Black.
+line-length = 120
+indent-width = 4
+target-version = "py313"
+output-format = "grouped"
+show-fixes = true
+
+[tool.ruff.lint]
+# 확장된 규칙 세트 설명
+# ANN001: 함수 반환 타입 어노테이션 검사
+# B: Bugbear 규칙 (잠재적 버그 및 설계 문제 감지)
+# C4: 컴프리헨션 개선 제안 (리스트/딕셔너리 컴프리헨션 최적화)
+# D: 문서화 스타일(docstring) 검사
+# E: pycodestyle 오류 (PEP 8 스타일 가이드 오류)
+# ERA: 주석 처리된 코드 검출 및 제거 권장
+# F: Pyflakes 규칙 (구문 오류, 미사용 import, 미정의 변수 등)
+# FURB: 코드 현대화 및 개선 제안
+# I: isort 규칙 (import 문 정렬 및 구성)
+# N: PEP 8 명명 규칙 검사
+# PERF: 성능 관련 문제 검사
+# PGH: 정규식 기반 패턴 검색을 통한 문제 검사
+# PTH: pathlib 사용 권장 (문자열 기반 경로 대신)
+# RUF: Ruff 특화 규칙
+# SIM: 코드 간결화 제안
+# T: 디버깅 코드(print, pdb 등) 사용 검사
+# TRY: 예외 처리 관련 모범 사례 검사
+# W: pycodestyle 경고 (PEP 8 스타일 가이드 경고)
+select = [
+    "ANN001", "B", "C4", "D", "E", "ERA", "F", "FURB", "I",
+    "N", "PERF", "PGH", "PTH", "RUF", "SIM", "T", "TRY", "W"
+]
+# 무시할 규칙 설명
+# B008: 함수 호출을 기본 인자 값으로 사용 (FastAPI, Click 등에서 일반적인 패턴)
+# D100: public module에 문서 문자열 작성 누락 규칙
+# D104: public package에 문서 문자열 작성 누락 규칙
+# D200: 한 줄 문서 문자열은 여러 줄 문서 문자열 형식을 사용해서는 안 됨 규칙
+# D205: 문서 문자열 첫 줄 다음에 빈 줄 필요 규칙
+# D212: 문서 문자열은 요약 줄로 시작해야 함 규칙
+# D415: 첫 줄은 마침표로 끝나야 함 규칙
+# E501: 라인 길이 제한 (Black이 처리하므로 무시)
+# F403: 와일드카드 임포트 허용 (from module import *)
+# SIM115: with 문 없이 open() 사용 허용
+# RUF006: 유니코드 문자열 접두사(u) 사용 허용
+# RUF008: 중첩된 with 문을 단일 with 문으로 결합 제안
+# RUF012: 클래스 속성 타입 어노테이션 추가 제안
+# TRY0: 예외 처리 관련 모든 규칙
+ignore = [
+    "B008", "D100", "D104", "D200", "D205", "D212", "D415", "E501", "F403",
+    "SIM115", "RUF006", "RUF008", "RUF012", "TRY0"
+]
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+# Pylint 호환 설정
+[tool.ruff.lint.pylint]
+max-args = 8  # 함수 인자 최대 개수
+max-branches = 15  # 분기문 최대 개수
+max-statements = 60  # 문장 최대 개수
+max-locals = 20  # 지역 변수 최대 개수
+
+# isort 설정 (import 정렬)
+[tool.ruff.lint.isort]
+combine-as-imports = true
+force-sort-within-sections = true
+known-first-party = ["news_reader_agent"]
+split-on-trailing-comma = false
+
+# 문서화 관련 설정
+[tool.ruff.lint.pydocstyle]
+convention = "google"  # Google 스타일 문서화 규칙 사용
+
+# 복잡도 설정
+[tool.ruff.lint.mccabe]
+max-complexity = 12  # 함수 복잡도 제한
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true
+docstring-code-line-length = "dynamic"
