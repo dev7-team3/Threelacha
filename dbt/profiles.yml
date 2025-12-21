@@ -1,0 +1,13 @@
+Threelacha:
+  target: dev
+  outputs:
+    dev:
+      type: trino
+      method: none
+      user: trino
+      host: trino
+      port: 8080
+      database: hive
+      schema: gold 
+      threads: 4
+      http_scheme: http

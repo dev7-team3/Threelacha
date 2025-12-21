@@ -4,11 +4,15 @@ from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 
 
 @dag(
-    dag_id="test_minio_connection",
+    dag_id="test_minio_conn",
     schedule=None,
     start_date=pendulum.datetime(2025, 1, 1),
     catchup=False,
+    default_args={
+        "owner": "jungeun_park",
+    },
     tags=["test", "minio", "connection"],
+    description='MinIO 연결 테스트를 위한 간단한 DAG',
 )
 def simple_minio_conn_test():
     """

@@ -42,6 +42,7 @@ airflow/__pycache__/
 # Airflow local metadata DB & runtime config
 airflow/airflow.db
 config/airflow.cfg
+airflow/config/airflow.cfg
 
 # Docker
 *.pid
@@ -50,15 +51,12 @@ docker-compose.override.yml
 
 # MinIO - 기본적으로 전체 무시
 minio-data/
+xl.meta
 
 # MinIO 내부 시스템 디렉토리 (절대 커밋 X)
 !minio-data/
 minio-data/.minio.sys/
 minio-data/.minio.sys/**
-
-# MinIO - 선택적으로 커밋 허용할 데이터
-!minio-data/team3-batch/
-!minio-data/team3-batch/**
 
 # Secrets / Environment
 .env
@@ -67,3 +65,10 @@ minio-data/.minio.sys/**
 *.secret
 *.key
 *.pem
+
+# ---------------------------------------------------------
+# dbt (자동 생성 산출물)
+# ---------------------------------------------------------
+dbt/**/target/
+dbt/**/dbt_packages/
+dbt/**/.user.yml
