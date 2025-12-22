@@ -364,6 +364,15 @@ services:
     command: server /data --console-address ":9001"
     volumes:
       - ./minio-data:/data
+  
+  mc:
+    image: minio/mc:latest
+    container_name: minio-mc
+    depends_on:
+      - minio
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["sleep infinity"]
+    restart: unless-stopped
 
 
 # ---------------------------------------------------------------------------------------------------------------

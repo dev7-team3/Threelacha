@@ -38,6 +38,7 @@ airflow/logs/
 airflow/latest/
 airflow/latest/
 airflow/__pycache__/
+airflow/.env
 
 # Airflow local metadata DB & runtime config
 airflow/airflow.db
@@ -72,3 +73,7 @@ minio-data/.minio.sys/**
 dbt/**/target/
 dbt/**/dbt_packages/
 dbt/**/.user.yml
+
+# 개인 테스트용
+dhdh/
+
