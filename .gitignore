@@ -1,12 +1,17 @@
-.env
+# Virtual Environments
+.venv/
+venv/
+env/
 
 # Python packaging
 *.egg-info/
 build/
 dist/
 __pycache__/
+*.py[cod]
 *.pyc
 *.pyo
+*.pyd
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
@@ -14,13 +19,61 @@ __pycache__/
 !.vscode/extensions.json
 !.vscode/*.code-snippets
 !*.code-workspace
+.ipynb_checkpoints/
+
+# OS / Editor
+.DS_Store
+.vscode/
+.idea/
 
 # Built Visual Studio Code Extensions
 *.vsix
-
 *.session
-
 CLAUDE.md
-
 .pytest_cache/
-.venv/
+
+# Airflow - runtime artifacts
+logs/
+airflow/logs/
+airflow/latest/
+airflow/latest/
+airflow/__pycache__/
+airflow/.env
+
+# Airflow local metadata DB & runtime config
+airflow/airflow.db
+config/airflow.cfg
+airflow/config/airflow.cfg
+
+# Docker
+*.pid
+*.log
+docker-compose.override.yml
+
+# MinIO - 기본적으로 전체 무시
+minio-data/
+xl.meta
+
+# MinIO 내부 시스템 디렉토리 (절대 커밋 X)
+!minio-data/
+minio-data/.minio.sys/
+minio-data/.minio.sys/**
+
+# Secrets / Environment
+.env
+.env.*
+!.env.example
+*.secret
+*.key
+*.pem
+
+# ---------------------------------------------------------
+# dbt (자동 생성 산출물)
+# ---------------------------------------------------------
+dbt/**/target/
+dbt/**/dbt_packages/
+dbt/**/.user.yml
+
+# 개인 테스트용
+dhdh/
+

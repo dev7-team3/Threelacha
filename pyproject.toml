@@ -4,11 +4,29 @@ version = "0.1.0"
 description = "농수산물 api를 사용한 데이터 파이프라인 및 대시보드"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "numpy>=1.26.4",
+    "pandas>=2.2.2",
+    "python-dotenv>=1.0.0",    
+    "apache-airflow>=3.0.0",
+    "typing-extensions>=4.12.0",
+    "duckdb>=1.4.2",
+    "requests>=2.32.3",
+    "boto3>=1.30.0",
+    "SQLAlchemy>=2.0.36",
+    "ipython-sql>=0.4.0",
+    "ipykernel>=6.29.0",
+    "tqdm>=4.67.1",
+    "s3fs>=2025.12.0",
+    "pyarrow>=22.0.0",
+    "dotenv>=0.9.9",
+    "pyopenssl>=25.3.0",
+    "urllib3>=2.6.2",
+    "ruff>=0.14.8",
+]
 
 [dependency-groups]
 dev = [
-    "ruff>=0.14.8",
 ]
 
 [tool.ruff]
@@ -21,7 +39,7 @@ exclude = [
 # Same as Black.
 line-length = 120
 indent-width = 4
-target-version = "py313"
+target-version = "py311"
 output-format = "grouped"
 show-fixes = true
 
@@ -85,7 +103,6 @@ max-locals = 20  # 지역 변수 최대 개수
 [tool.ruff.lint.isort]
 combine-as-imports = true
 force-sort-within-sections = true
-known-first-party = ["news_reader_agent"]
 split-on-trailing-comma = false
 
 # 문서화 관련 설정
