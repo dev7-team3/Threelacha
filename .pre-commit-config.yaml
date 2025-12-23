@@ -13,11 +13,3 @@ repos:
         args: [ "--fix", "--exit-non-zero-on-fix" ]
         # --fix : 자동 수정 옵션
         # --exit-non-zero-on-fix : 자동 수정이 발생하면 커밋 실패
-
-  # Docstring 스타일 검사
-  - repo: https://github.com/terrencepreilly/darglint
-    rev: v1.8.1
-    hooks:
-      - id: darglint
-        files: ^airflow/plugins/ # plugins 디렉토리만 검사
-        args: [ "--style=google", "--docstring-style=google" ]
