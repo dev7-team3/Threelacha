@@ -1,0 +1,23 @@
+fail_fast: true
+# 첫번째 훅 실패 시 나머지 훅 실행 안함
+
+repos:
+  # ruff: formatter + linter
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.8
+    hooks:
+      - id: ruff-format # 코드 포매팅
+        files: ^(airflow)/  # airflow/ 아래 파일만 대상
+      - id: ruff # 린트
+        files: ^(airflow)/
+        args: [ "--fix", "--exit-non-zero-on-fix" ]
+        # --fix : 자동 수정 옵션
+        # --exit-non-zero-on-fix : 자동 수정이 발생하면 커밋 실패
+
+  # Docstring 스타일 검사
+  - repo: https://github.com/terrencepreilly/darglint
+    rev: v1.8.1
+    hooks:
+      - id: darglint
+        files: ^airflow/plugins/ # plugins 디렉토리만 검사
+        args: [ "--style=google", "--docstring-style=google" ]
