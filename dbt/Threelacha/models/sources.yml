@@ -6,5 +6,5 @@ sources:
     database: hive
     schema: silver
     tables:
-      - name: api_1
+      - name: api1
         description: "API-1 silver 데이터"
