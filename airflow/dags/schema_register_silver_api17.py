@@ -17,19 +17,19 @@ import pendulum
 
 
 @dag(
-    dag_id="schema_register_silver_api1",
+    dag_id="schema_register_silver_api17",
     start_date=pendulum.datetime(2025, 1, 1, tz="UTC"),
     schedule=None,  # 수동 실행 (또는 Silver Transform 완료 후 트리거)
     catchup=False,
     default_args={
-        "owner": "jungeun_park",
+        "owner": "jiyeon_kim",
     },
-    tags=["KAMIS", "api-1", "silver", "metastore", "schema"],
-    description="Silver API1 테이블을 Hive Metastore에 등록 및 파티션 동기화",
+    tags=["KAMIS", "api-17", "silver", "metastore", "schema"],
+    description="Silver API17 테이블을 Hive Metastore에 등록 및 파티션 동기화",
 )
-def register_silver_api1_metastore():
+def register_silver_api17_metastore():
     """
-    Silver API1 테이블 Metastore 등록
+    Silver API17 테이블 Metastore 등록
 
     처리 흐름:
     1. Silver 스키마 생성
@@ -52,16 +52,16 @@ def register_silver_api1_metastore():
         task_id="drop_existing_table",
         conn_id="trino_conn",
         sql="""
-        DROP TABLE IF EXISTS hive.silver.api1
+        DROP TABLE IF EXISTS hive.silver.api17
         """,
     )
 
-    # 3. Silver API1 테이블 생성 (컬럼 코멘트 포함)
-    create_api1_table = SQLExecuteQueryOperator(
-        task_id="create_api1_table",
+    # 3. Silver API17 테이블 생성 (컬럼 코멘트 포함)
+    create_api17_table = SQLExecuteQueryOperator(
+        task_id="create_api17_table",
         conn_id="trino_conn",
         sql="""
-        CREATE TABLE hive.silver.api1 (
+        CREATE TABLE hive.silver.api17 (
             -- 날짜/시간 정보
             res_dt DATE COMMENT '응답일자',
             week_of_year INTEGER COMMENT '연도기준주차',
@@ -71,11 +71,15 @@ def register_silver_api1_metastore():
             -- 상품 분류
             product_cls_cd VARCHAR COMMENT '도소매구분코드',
             product_cls_nm VARCHAR COMMENT '도소매구분명',
+            product_cls_unit VARCHAR COMMENT '도소매구분단위',
+            product_no DOUBLE COMMENT '상품번호',
+            -- 카테고리
             category_cd VARCHAR COMMENT '부류코드',
             category_nm VARCHAR COMMENT '부류명',
             -- 지역
             country_cd VARCHAR COMMENT '지역코드',
             country_nm VARCHAR COMMENT '지역명',
+            market_nm VARCHAR COMMENT '시장명',
             -- 품목 정보
             item_nm VARCHAR COMMENT '품목명',
             item_cd VARCHAR COMMENT '품목코드',
@@ -83,36 +87,16 @@ def register_silver_api1_metastore():
             kind_cd VARCHAR COMMENT '품종코드',
             rank_nm VARCHAR COMMENT '등급명',
             rank_cd VARCHAR COMMENT '등급코드',
-            unit VARCHAR COMMENT '단위',
-            -- 당일 정보
-            base_dt VARCHAR COMMENT '조회일자',
-            base_pr DOUBLE COMMENT '조회일자가격',
-            -- 1일전
-            prev_1d_dt VARCHAR COMMENT '1일전일자',
-            prev_1d_pr DOUBLE COMMENT '1일전가격',
-            -- 1주일전
-            prev_1w_dt VARCHAR COMMENT '1주일전일자',
-            prev_1w_pr DOUBLE COMMENT '1주일전가격',
-            -- 2주일전
-            prev_2w_dt VARCHAR COMMENT '2주일전일자',
-            prev_2w_pr DOUBLE COMMENT '2주일전가격',
-            -- 1개월전
-            prev_1m_dt VARCHAR COMMENT '1개월전일자',
-            prev_1m_pr DOUBLE COMMENT '1개월전가격',
-            -- 1년전
-            prev_1y_dt VARCHAR COMMENT '1년전일자',
-            prev_1y_pr DOUBLE COMMENT '1년전가격',
-            -- 평년
-            avg_tp VARCHAR COMMENT '평년타입',
-            avg_pr DOUBLE COMMENT '평년가격',
+            -- 가격 정보
+            price DOUBLE COMMENT '가격',
             -- 파티션 컬럼(path 기반 생성)
             year INTEGER COMMENT '연도',
             month INTEGER COMMENT '월'
         )
-        COMMENT 'KAMIS API1 Silver 레이어'
+        COMMENT 'KAMIS API17 Silver 레이어'
         WITH (
             format = 'PARQUET',
-            external_location = 's3a://team3-batch/silver/api-1/',
+            external_location = 's3a://team3-batch/silver/api-17/',
             partitioned_by = ARRAY['year', 'month']
         )
         """,
@@ -125,7 +109,7 @@ def register_silver_api1_metastore():
         sql="""
         CALL hive.system.sync_partition_metadata(
             schema_name => 'silver',
-            table_name => 'api1',
+            table_name => 'api17',
             mode => 'ADD'
         )
         """,
@@ -137,9 +121,9 @@ def register_silver_api1_metastore():
         conn_id="trino_conn",
         sql="""
         -- 테이블 구조 확인
-        DESCRIBE hive.silver.api1;
+        DESCRIBE hive.silver.api17;
         -- 파티션 목록 확인
-        SELECT * FROM hive.silver."api1$partitions" ORDER BY year, month;
+        SELECT * FROM hive.silver."api17$partitions" ORDER BY year, month;
         """,
     )
 
@@ -157,11 +141,11 @@ def register_silver_api1_metastore():
     (
         create_silver_schema
         >> drop_existing_table
-        >> create_api1_table
+        >> create_api17_table
         >> sync_partitions
         >> verify_table
         >> create_gold_schema
     )
 
 
-register_silver_api1_metastore()
+register_silver_api17_metastore()

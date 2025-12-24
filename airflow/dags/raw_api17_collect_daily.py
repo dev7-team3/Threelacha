@@ -7,6 +7,7 @@ from pathlib import Path
 from airflow.models.dag import DAG
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from airflow.providers.standard.operators.python import PythonOperator
+from connection_utils import get_storage_conn_id
 import dotenv
 import requests
 
@@ -14,6 +15,7 @@ dotenv.load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+S3_CONN_ID = get_storage_conn_id()
 API_KEY = os.getenv("CERT_KEY")
 ID = os.getenv("CERT_ID")
 
@@ -170,7 +172,7 @@ def get_data_by_country_code(country_code: str, **context) -> dict:
     start_day = (logical_date - timedelta(days=1)).strftime("%Y-%m-%d")
     end_day = logical_date.strftime("%Y-%m-%d")
 
-    hook = S3Hook(aws_conn_id="minio_conn")
+    hook = S3Hook(aws_conn_id=S3_CONN_ID)
 
     for category in set_category_product_variety_retail_code():
         data_from_api = get_data(
