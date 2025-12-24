@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import json
+import logging
 import os
 from pathlib import Path
 
@@ -11,10 +12,12 @@ import requests
 
 dotenv.load_dotenv()
 
+logger = logging.getLogger(__name__)
+
 API_KEY = os.getenv("CERT_KEY")
 ID = os.getenv("CERT_ID")
 
-
+BUCKET_NAME = "team3-batch"
 REQUEST_URL = "https://www.kamis.or.kr/service/price/xml.do?action=periodRetailProductList"
 
 with Path.open(Path(__file__).parent.parent / "plugins" / "param_tree.json", "r", encoding="utf-8") as f:
@@ -53,6 +56,10 @@ def group_data_by_date(data: dict) -> dict[str, list] | None:
         dict[str, list] | None: 날짜별 데이터. 오류 발생 시 None 반환
     """
     grouped = {}
+
+    if data["data"]["error_code"] != "000":
+        return None
+
     for item in data["data"]["item"]:
         # yyyy: "2025", regday: "12/17" -> "20251217"
         yyyy = item.get("yyyy", "")
@@ -95,6 +102,8 @@ def get_data(
     """
     url = f"{REQUEST_URL}&p_cert_key={API_KEY}&p_cert_id={ID}&p_returntype=json&p_startday={start_day}&p_endday={end_day}&p_countrycode={country_code}&p_convert_kg_yn=N&p_itemcategorycode={item_category_code}&p_itemcode={item_code}&p_kindcode={kind_code}&p_productrankcode={product_rank_code}"
 
+    logger.info(f"🔄 Getting data for {url}")
+
     try:
         response = requests.get(url, timeout=30)
         response.raise_for_status()
@@ -105,6 +114,7 @@ def get_data(
 
 
 def upload_data_to_s3(
+    hook: S3Hook,
     country_code: str,
     date_data: dict[str, list],
     category_info: dict,
@@ -112,6 +122,7 @@ def upload_data_to_s3(
     """날짜별 데이터를 S3에 업로드
 
     Args:
+        hook (S3Hook): S3Hook 인스턴스
         country_code (str): 도시 코드
         date_data (dict[str, list]): 날짜별 데이터
         category_info (dict): 카테고리, 품목, 품종, 판매코드 정보
@@ -123,8 +134,6 @@ def upload_data_to_s3(
     kind_code = category_info["kind_code"]
     product_rank_code = category_info["product_rank_code"]
 
-    hook = S3Hook(aws_conn_id="s3_conn")
-
     for date_str, data in date_data.items():
         key = (
             f"raw/api-17/dt={date_str}/"
@@ -134,14 +143,13 @@ def upload_data_to_s3(
 
         json_data = json.dumps(data, ensure_ascii=False)
 
-        bucket_name = "team3-batch"
-
         hook.load_string(
             string_data=json_data,
             key=key,
-            bucket_name=bucket_name,
+            bucket_name=BUCKET_NAME,
             replace=True,
         )
+        logger.info(f"✅ Uploaded data to {key}")
 
 
 def get_data_by_country_code(country_code: str, **context) -> dict:
@@ -162,6 +170,8 @@ def get_data_by_country_code(country_code: str, **context) -> dict:
     start_day = (logical_date - timedelta(days=1)).strftime("%Y-%m-%d")
     end_day = logical_date.strftime("%Y-%m-%d")
 
+    hook = S3Hook(aws_conn_id="minio_conn")
+
     for category in set_category_product_variety_retail_code():
         data_from_api = get_data(
             country_code=country_code,
@@ -174,9 +184,13 @@ def get_data_by_country_code(country_code: str, **context) -> dict:
         )
 
         if data_from_api is None:
+            logger.warning(
+                f"❌ No data found for {country_code} {start_day} {end_day} {category['item_category_code']} {category['item_code']} {category['kind_code']} {category['product_rank_code']}"
+            )
             continue
 
         upload_data_to_s3(
+            hook=hook,
             country_code=country_code,
             date_data=data_from_api,
             category_info=category,
