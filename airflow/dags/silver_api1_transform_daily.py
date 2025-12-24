@@ -6,14 +6,20 @@ import re
 from typing import Any, Dict, List, Optional
 
 from airflow.exceptions import AirflowSkipException
+from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from airflow.sdk import dag, task
-from airflow.sdk.bases.hook import BaseHook
-import boto3
+from connection_utils import get_storage_conn_id
 import numpy as np
 import pandas as pd
 import pendulum
 
 logger = logging.getLogger("airflow.task")
+
+# ---------------------------------------------------------
+# 상수 정의
+# ---------------------------------------------------------
+BUCKET_NAME = "team3-batch"
+CONN_ID = get_storage_conn_id()
 
 # ---------------------------------------------------------
 # 유틸리티 함수
@@ -104,25 +110,15 @@ def transform_api1_raw_to_silver() -> None:
             S3 파일 키 리스트
 
         Raises:
-            ValueError: 파일이 없는 경우
+            AirflowSkipException: 파일이 없는 경우
         """
         logger.info(f"📋 {target_date}의 파일 리스트 조회 시작")
 
-        conn = BaseHook.get_connection("minio_conn")
-        s3 = boto3.client(
-            "s3",
-            aws_access_key_id=conn.login,
-            aws_secret_access_key=conn.password,
-            endpoint_url=conn.extra_dejson["endpoint_url"],
-        )
-        bucket = "team3-batch"
+        s3_hook = S3Hook(aws_conn_id=CONN_ID)
         prefix = f"raw/api-1/dt={target_date}/"
-
-        keys = []
-        paginator = s3.get_paginator("list_objects_v2")
-        for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
-            if "Contents" in page:
-                keys.extend([obj["Key"] for obj in page["Contents"] if obj["Key"].endswith("data.json")])
+        all_keys = s3_hook.list_keys(bucket_name=BUCKET_NAME, prefix=prefix)
+        # data.json 파일만 필터링
+        keys = [key for key in (all_keys or []) if key.endswith("data.json")]
 
         if not keys:
             logger.warning(f"⚠️ No raw files found for date: {target_date}")
@@ -148,21 +144,16 @@ def transform_api1_raw_to_silver() -> None:
         """
         logger.info(f"🔄 {len(file_keys)}개 파일 파싱 시작")
 
-        conn = BaseHook.get_connection("minio_conn")
-        s3 = boto3.client(
-            "s3",
-            aws_access_key_id=conn.login,
-            aws_secret_access_key=conn.password,
-            endpoint_url=conn.extra_dejson["endpoint_url"],
-        )
-        bucket = "team3-batch"
+        s3_hook = S3Hook(aws_conn_id=CONN_ID)
+
         all_records = []
         skipped_files = 0
 
         for i, key in enumerate(file_keys, 1):
             try:
-                response = s3.get_object(Bucket=bucket, Key=key)
-                content = json.loads(response["Body"].read().decode("utf-8"))
+                content_str = s3_hook.read_key(key=key, bucket_name=BUCKET_NAME)
+                content = json.loads(content_str)
+
                 metadata = extract_metadata_from_path(key)
 
                 # data 섹션이 리스트(에러 응답)인 경우 스킵
@@ -363,28 +354,21 @@ def transform_api1_raw_to_silver() -> None:
 
         logger.info(f"💾 Parquet 저장 시작: {len(df):,}개 레코드")
 
-        conn = BaseHook.get_connection("minio_conn")
-        s3 = boto3.client(
-            "s3",
-            aws_access_key_id=conn.login,
-            aws_secret_access_key=conn.password,
-            endpoint_url=conn.extra_dejson["endpoint_url"],
-        )
-        bucket = "team3-batch"
+        s3_hook = S3Hook(aws_conn_id=CONN_ID)
         dt_obj = datetime.strptime(target_date, "%Y-%m-%d")
 
         # 날짜별 개별 파일로 저장
         path = f"silver/api-1/year={dt_obj.strftime('%Y')}/month={dt_obj.strftime('%m')}/"
         file_key = f"{path}data_{target_date.replace('-', '')}.parquet"
 
-        # Parquet 저장
+        # Parquet를 메모리 버퍼에 저장
         buffer = BytesIO()
         df.to_parquet(buffer, engine="pyarrow", index=False)
         buffer.seek(0)
 
-        s3.put_object(Bucket=bucket, Key=file_key, Body=buffer.getvalue(), ContentType="application/octet-stream")
+        s3_hook.load_bytes(bytes_data=buffer.getvalue(), key=file_key, bucket_name=BUCKET_NAME, replace=True)
 
-        logger.info(f"✅ Saved to: s3://{bucket}/{file_key}")
+        logger.info(f"✅ Saved to: s3://{BUCKET_NAME}/{file_key}")
         logger.info(f"   Records: {len(df):,}개")
         logger.info("   Strategy: 날짜별 개별 파일 (다른 날짜 데이터 안전)")
 

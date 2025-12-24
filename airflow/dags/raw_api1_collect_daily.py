@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, TypedDict
 from airflow.exceptions import AirflowSkipException
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from airflow.sdk import dag, task
+from connection_utils import get_storage_conn_id
 import pendulum
 import requests
 
@@ -18,7 +19,7 @@ BASE_API: str = "http://www.kamis.or.kr/service/price/xml.do"
 CERT_KEY: str = os.environ.get("CERT_KEY")
 CERT_ID: str = os.environ.get("CERT_ID")
 BUCKET_NAME = "team3-batch"
-S3_CONN_ID = "minio_conn"
+S3_CONN_ID = get_storage_conn_id()
 
 PRODUCT_CLS_CODES: Dict[str, str] = {
     "01": "소매",
