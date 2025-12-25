@@ -5,6 +5,7 @@ from pathlib import Path
 
 from airflow.operators.python import PythonOperator
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
+from connection_utils import get_storage_conn_id
 import dotenv
 import requests
 
@@ -16,6 +17,8 @@ REQUEST_URL = "http://www.kamis.or.kr/service/price/xml.do?action=periodRetailPr
 
 API_KEY = os.getenv("CERT_KEY")
 ID = os.getenv("CERT_ID")
+S3_CONN_ID = get_storage_conn_id()
+BUCKET_NAME = "team3-batch"
 
 with Path.open(Path(__file__).parent.parent / "plugins" / "param_tree.json", "r", encoding="utf-8") as f:
     params_tree = json.load(f)
@@ -72,7 +75,7 @@ def get_data(
         raise requests.exceptions.RequestException(f"Error: {e}") from e
 
 
-def collect_yearly_data(region: str, start_day: str = "2025-01-01", end_day: str = "2025-12-22") -> list[dict]:
+def collect_yearly_data(region: str, start_day: str, end_day: str) -> list[dict]:
     """연간 데이터를 수집하여 S3에 업로드"""
     for category_row in set_category_product_variety_retail_code():
         data = get_data(
@@ -93,7 +96,7 @@ def upload_data_to_s3(region: str, data: list[dict], category_row: dict) -> str:
 
     # 폴더 경로 구성: s3://team3-batch/raw/api-17/dt=YYYYMMDD/product_cls=01/category=100/country=1101/product_rank=04/data.json
 
-    date_str = "2025"  # datetime.now().strftime("%Y%m%d")
+    date_str = "2025"  # 백필에서 필요한 년도로 세팅해야함
     product_cls = "01"
     item_category_code = category_row["item_category_code"]
     item_code = category_row["item_code"]
@@ -106,11 +109,11 @@ def upload_data_to_s3(region: str, data: list[dict], category_row: dict) -> str:
         f"data.json"
     )
 
-    hook = S3Hook(aws_conn_id="minio_conn")
+    hook = S3Hook(aws_conn_id=S3_CONN_ID)
     hook.load_string(
         string_data=json_data,
         key=key,
-        bucket_name="threelacha",
+        bucket_name=BUCKET_NAME,
         replace=True,
     )
 
@@ -135,5 +138,9 @@ with DAG(
         collect_yearly_data_task = PythonOperator(
             task_id=f"collect_yearly_data_{region}",
             python_callable=collect_yearly_data,
-            op_kwargs={"region": region},
+            op_kwargs={
+                "region": region,
+                "start_day": "2025-01-01",
+                "end_day": "2025-12-22",
+            },
         )

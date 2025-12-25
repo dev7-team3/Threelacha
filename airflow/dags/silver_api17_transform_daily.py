@@ -7,6 +7,7 @@ import re
 
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from airflow.providers.standard.operators.python import PythonOperator
+from connection_utils import get_storage_conn_id
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -26,6 +27,7 @@ with Path.open(Path(__file__).parent.parent / "plugins" / "country_code.json", "
 country_code_reverse = {v: k for k, v in country_code_mapping.items()}
 
 BUCKET_NAME = "team3-batch"
+S3_CONN_ID = get_storage_conn_id()
 
 
 def parse_file_path(file_path: str) -> dict:
@@ -77,9 +79,12 @@ def format_dataframe(df: pd.DataFrame, object_name: str) -> pd.DataFrame:
             return None
 
     df["res_dt"] = df.apply(parse_regday, axis=1)
+    df["res_dt"] = df["res_dt"].dt.date
 
     df["week_of_year"] = df["res_dt"].dt.isocalendar().week
     df["weekday_num"] = df["res_dt"].dt.weekday
+    df["year"] = df["res_dt"].dt.year
+    df["month"] = df["res_dt"].dt.month
 
     weekday_map = {
         0: "월요일",
@@ -163,6 +168,7 @@ def upload_parquet_to_s3(hook: S3Hook, df: pd.DataFrame, object_name: str) -> No
             bucket_name=BUCKET_NAME,
             replace=True,
         )
+
         logger.info(f"✅ Uploaded Parquet file: {object_name} ({len(df):,} records)")
     except Exception as e:
         logger.warning(f"Error uploading {object_name}: {e}")
@@ -201,7 +207,7 @@ def read_csv_from_s3(hook: S3Hook, object_name: str) -> pd.DataFrame | None:
 
 def merge_dataframes(df: pd.DataFrame) -> pd.DataFrame:
     """두 개의 DataFrame을 병합"""
-    s3_client = S3Hook(aws_conn_id="s3_conn")
+    s3_client = S3Hook(aws_conn_id=S3_CONN_ID)
 
     response = s3_client.get_key(key="metadata/dim_product_no.csv", bucket_name=BUCKET_NAME)
     meta_data = pd.read_csv(BytesIO(response.get()["Body"].read()))
@@ -227,14 +233,14 @@ def transform_raw_to_silver(**context) -> None:
         logger.error("logical_date 또는 data_interval_start를 찾을 수 없습니다.")
         logical_date = datetime.now()
 
-    target_date = (logical_date - timedelta(days=2)).strftime("%Y-%m-%d")
+    target_date = (logical_date - timedelta(days=1)).strftime("%Y-%m-%d")
     year = logical_date.year
     month = logical_date.month
     month_str = f"{month:02d}"
 
     logger.info(f"Processing date: {target_date} (Year: {year}, Month: {month})")
 
-    hook = S3Hook(aws_conn_id="minio_conn")
+    hook = S3Hook(aws_conn_id=S3_CONN_ID)
 
     # 해당 날짜의 모든 JSON 파일 목록 가져오기
     prefix = f"raw/api-17/dt={target_date}/"
@@ -330,6 +336,8 @@ def transform_raw_to_silver(**context) -> None:
         "rank_nm",
         "market_nm",
         "price",
+        "year",
+        "month",
     ]
 
     existing_columns = [col for col in column_order if col in df_combined.columns]
