@@ -33,7 +33,7 @@ def dbt_transform_gold():
         sql="""
         CALL hive.system.sync_partition_metadata(
             schema_name => 'silver',
-            table_name => 'api_1',
+            table_name => 'api1',
             mode => 'FULL'
         )
         """,
