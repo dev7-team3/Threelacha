@@ -9,6 +9,7 @@ from data.sample_data import get_price_summary, get_popular_items
 from data.trino_connection import execute_query, get_trino_connection
 from data.queries.channel_queries import get_channel_comparison_query
 from components.channel_cards import render_channel_comparison_sections
+from components.region_map import render_region_map, render_selected_item_region_map
 
 
 def load_css():
@@ -30,6 +31,14 @@ st.set_page_config(
 
 if "page" not in st.session_state:
     st.session_state.page = "main"
+
+# 세션 상태 초기화
+if "show_region_map" not in st.session_state:
+    st.session_state.show_region_map = False
+if "selected_item_nm" not in st.session_state:
+    st.session_state.selected_item_nm = None
+if "selected_kind_nm" not in st.session_state:
+    st.session_state.selected_kind_nm = None
 
 # -------------------------
 # 사이드바 (좌측 탭)
@@ -166,6 +175,10 @@ elif st.session_state.page == "dist":
                         df_comparison = execute_query(comparison_query, conn)
 
                         if len(df_comparison) > 0:
+                            # 세션 상태에 쿼리 결과 저장
+                            st.session_state.df_comparison = df_comparison
+                            st.session_state.query_date_filter = date_filter
+                            st.session_state.query_category_filter = category_filter
                             
                                                         # 요약 통계
                             st.subheader("📈 요약 통계")
@@ -187,16 +200,58 @@ elif st.session_state.page == "dist":
                             st.divider()
                             
                             render_channel_comparison_sections(df_comparison)
+                            
+                            # 선택된 품목이 있으면 지역별 지도 표시
+                            render_selected_item_region_map(
+                                conn,
+                                date_filter=st.session_state.get("query_date_filter"),
+                                category_filter=st.session_state.get("query_category_filter")
+                            )
 
+                            st.divider()
                             st.subheader("📊 유통 vs 전통 가격 비교")
                             st.dataframe(df_comparison, use_container_width=True)
-                                
                         else:
                             st.info("조회된 데이터가 없습니다.")
 
                     except Exception as e:
                         st.error(f"데이터 조회 중 오류 발생: {str(e)}")
                         st.info("💡 Trino 서버가 실행 중인지 확인하세요. (docker-compose up -d trino)")
+                            
+            # 쿼리 버튼이 눌러지지 않았지만 이전에 조회한 데이터가 있고 지도 표시 요청이 있는 경우
+            elif "df_comparison" in st.session_state and len(st.session_state.df_comparison) > 0:
+                df_comparison = st.session_state.df_comparison
+                
+                # 요약 통계
+                st.subheader("📈 요약 통계")
+                summary_col1, summary_col2, summary_col3 = st.columns(3)
+
+                with summary_col1:
+                    avg_yutong = df_comparison["유통_평균가격"].mean()
+                    st.metric("유통 평균 가격", f"{avg_yutong:,.0f}원")
+
+                with summary_col2:
+                    avg_jeontong = df_comparison["전통_평균가격"].mean()
+                    st.metric("전통 평균 가격", f"{avg_jeontong:,.0f}원")
+
+                with summary_col3:
+                    avg_diff = df_comparison["가격차이"].mean()
+                    st.metric("평균 가격 차이", f"{avg_diff:,.0f}원")
+                
+                st.divider()
+                
+                render_channel_comparison_sections(df_comparison)
+                
+                # 선택된 품목이 있으면 지역별 지도 표시
+                render_selected_item_region_map(
+                    conn,
+                    date_filter=st.session_state.get("query_date_filter"),
+                    category_filter=st.session_state.get("query_category_filter")
+                )
+                
+                st.divider()
+                st.subheader("📊 유통 vs 전통 가격 비교")
+                st.dataframe(df_comparison, use_container_width=True)
 
         except Exception as e:
             st.error(f"연결 오류: {str(e)}")
@@ -223,10 +278,6 @@ elif st.session_state.page == "dist":
         with col3:
             st.subheader("온라인")
             st.info("굴 1kg · 18,000원")
-    
-    st.divider()
-    st.subheader("전통시장 지역별 가격 비교")
-    st.write("※ 지도 시각화는 추후 추가 예정")
 
 # 사이드바 하단에 연결 정보 표시
 with st.sidebar:

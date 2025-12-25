@@ -33,7 +33,7 @@ def render_price_comparison_card(
     price_diff: float,
     border_color: str
 ):
-    """가격 비교 카드를 렌더링합니다.
+    """가격 비교 카드를 렌더링합니다. 카드 전체가 클릭 가능합니다.
     
     Args:
         item_nm: 품목명
@@ -45,38 +45,66 @@ def render_price_comparison_card(
         price_diff: 가격 차이
         border_color: 카드 테두리 색상
     """
+    # 버튼 키 생성
+    button_key = f"card_{item_nm}_{kind_nm}".replace(" ", "_").replace("(", "").replace(")", "").replace("/", "_")
+    
+    # 카드 내용을 간단한 텍스트로 구성 (버튼 label로 사용)
+    button_label = f"{item_nm}({kind_nm})"
+    
+    # 카드처럼 보이는 버튼 생성
+    button_clicked = st.button(
+        button_label,
+        key=button_key,
+        use_container_width=True,
+        type="secondary"
+    )
+    
+    # 버튼 아래에 카드 정보 표시
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.markdown(f"<div style='text-align: center; color: #666; font-size: 14px; margin-bottom: 5px;'>{other_channel}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='text-align: center; color: #333; font-size: 18px; font-weight: 500;'>{other_price:,.0f}원</div>", unsafe_allow_html=True)
+    with col2:
+        st.markdown(f"<div style='text-align: center; color: #666; font-size: 14px; margin-bottom: 5px;'>{cheaper_channel}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='text-align: center; color: #28a745; font-size: 20px; font-weight: bold;'>{cheaper_price:,.0f}원</div>", unsafe_allow_html=True)
+    with col3:
+        st.markdown(f"<div style='text-align: center; color: #666; font-size: 14px; margin-bottom: 5px;'>가격 차이</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='text-align: center; color: #4A90E2; font-size: 18px; font-weight: bold;'>↓ {price_diff:,.0f}원</div>", unsafe_allow_html=True)
+    
+    # 버튼을 카드처럼 스타일링하는 CSS
     st.markdown(
         f"""
-        <div style="background: white; padding: 20px; border-radius: 10px; 
-                    margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                    border-left: 5px solid {border_color};">
-            <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333;">
-                 {item_nm}({kind_nm})
-            </div>
-            <div style="display: flex; justify-content: space-between; gap: 15px;">
-                <div style="flex: 1; text-align: center;">
-                    <div style="color: #666; font-size: 14px; margin-bottom: 8px;">{other_channel}</div>
-                    <div style="color: #333; font-size: 18px; font-weight: 500;">
-                        {other_price:,.0f}원
-                    </div>
-                </div>
-                <div style="flex: 1; text-align: center;">
-                    <div style="color: #666; font-size: 14px; margin-bottom: 8px;">{cheaper_channel}</div>
-                    <div style="color: #28a745; font-size: 20px; font-weight: bold;">
-                        {cheaper_price:,.0f}원
-                    </div>
-                </div>
-                <div style="flex: 1; text-align: center;">
-                    <div style="color: #666; font-size: 14px; margin-bottom: 8px;">가격 차이</div>
-                    <div style="color: #4A90E2; font-size: 18px; font-weight: bold;">
-                        ↓ {price_diff:,.0f}원
-                    </div>
-                </div>
-            </div>
-        </div>
+        <style>
+        button[kind="secondary"][data-testid="baseButton-secondary"]:has([key="{button_key}"]) {{
+            background: white !important;
+            border: none !important;
+            border-left: 5px solid {border_color} !important;
+            border-radius: 10px !important;
+            padding: 20px !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+            margin-bottom: 10px !important;
+            text-align: left !important;
+            height: auto !important;
+            min-height: auto !important;
+            transition: all 0.3s ease !important;
+            cursor: pointer !important;
+            width: 100% !important;
+        }}
+        button[kind="secondary"][data-testid="baseButton-secondary"]:has([key="{button_key}"]):hover {{
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
+            transform: translateY(-2px) !important;
+        }}
+        </style>
         """,
-        unsafe_allow_html=True,
+        unsafe_allow_html=True
     )
+    
+    # 버튼 클릭 시 처리
+    if button_clicked:
+        st.session_state.selected_item_nm = item_nm
+        st.session_state.selected_kind_nm = kind_nm
+        st.session_state.show_region_map = True
+        st.rerun()
 
 
 def render_yutong_cheaper_section(df_comparison: pd.DataFrame):
@@ -91,7 +119,7 @@ def render_yutong_cheaper_section(df_comparison: pd.DataFrame):
     jeontong_cheaper = jeontong_cheaper.sort_values("가격차이").head(3)
     
     render_channel_comparison_header(
-        "🏬 대형마트가 더 저렴해요!",
+        "대형마트가 더 저렴해요!",
         "#667eea 0%, #764ba2 100%"
     )
     
@@ -126,7 +154,7 @@ def render_jeontong_cheaper_section(df_comparison: pd.DataFrame):
     yutong_cheaper = yutong_cheaper.sort_values("가격차이", ascending=False).head(3)
     
     render_channel_comparison_header(
-        "🏪 전통시장이 더 저렴해요!",
+        "전통시장이 더 저렴해요!",
         "#28a745 0%, #20c997 100%"
     )
     

@@ -1,4 +1,0 @@
-streamlit>=1.28.0
-pandas>=2.0.0
-trino>=0.326.0
-

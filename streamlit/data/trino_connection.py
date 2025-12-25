@@ -37,7 +37,7 @@ def execute_query(query: str, conn: Connection) -> pd.DataFrame:
         query: 실행할 SQL 쿼리 문자열
         
     Returns:
-        pd.DataFrame: 쿼리 결과를 담은 DataFrame
+        pd.DataFrame: 쿼리 결과를 담은 DataFrame (숫자 컬럼은 반올림하여 정수로 변환)
         
     Raises:
         Exception: 쿼리 실행 중 오류 발생 시
@@ -55,6 +55,13 @@ def execute_query(query: str, conn: Connection) -> pd.DataFrame:
         
         # DataFrame 생성
         df = pd.DataFrame(rows, columns=columns)
+        
+        # 숫자 컬럼 반올림하여 정수로 변환
+        numeric_cols = df.select_dtypes(include=['float64', 'float32', 'int64', 'int32']).columns
+        for col in numeric_cols:
+            # 문자열 컬럼이 아닌 경우에만 반올림
+            if df[col].dtype in ['float64', 'float32']:
+                df[col] = df[col].round().astype(int)
         
         return df
     finally:
