@@ -20,6 +20,7 @@ load_css()
 
 summary = get_price_summary()
 popular_items = get_popular_items()
+conn = get_trino_connection()
 
 
 st.set_page_config(
@@ -162,7 +163,7 @@ elif st.session_state.page == "dist":
             if query_button:
                 with st.spinner("데이터를 불러오는 중..."):
                     try:
-                        df_comparison = execute_query(comparison_query)
+                        df_comparison = execute_query(comparison_query, conn)
 
                         if len(df_comparison) > 0:
                             

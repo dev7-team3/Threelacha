@@ -1,7 +1,7 @@
 """Trino 데이터베이스 연결 모듈"""
 import os
 import pandas as pd
-from trino.dbapi import connect
+from trino.dbapi import connect, Connection
 import streamlit as st
 
 
@@ -30,7 +30,7 @@ def get_trino_connection():
     return conn
 
 
-def execute_query(query: str) -> pd.DataFrame:
+def execute_query(query: str, conn: Connection) -> pd.DataFrame:
     """Trino 쿼리를 실행하고 DataFrame으로 반환합니다.
     
     Args:
@@ -42,7 +42,6 @@ def execute_query(query: str) -> pd.DataFrame:
     Raises:
         Exception: 쿼리 실행 중 오류 발생 시
     """
-    conn = get_trino_connection()
     cursor = conn.cursor()
     
     try:
