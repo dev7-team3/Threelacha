@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+import pandas as pd
 import streamlit as st
 
 from components.channel_cards import render_channel_comparison_sections
@@ -123,88 +124,34 @@ elif st.session_state.page == "eco":
             )
 
             # team3_gold.api13_price_statistics_by_category 테이블에서 최신 데이터 조회
-            # 각 품목별로 가장 저렴한 market_category 찾기
             latest_data_query = """
             WITH latest_date AS (
                 SELECT MAX(res_dt) as max_date
                 FROM team3_gold.api13_price_statistics_by_category
-            ),
-            item_prices AS (
-                SELECT 
-                    item_nm,
-                    item_cd,
-                    market_category,
-                    avg_price,
-                    min_price,
-                    max_price,
-                    record_count
-                FROM team3_gold.api13_price_statistics_by_category
-                CROSS JOIN latest_date
-                WHERE res_dt = latest_date.max_date
-            ),
-            cheapest_market AS (
-                SELECT 
-                    ip1.item_nm,
-                    ip1.item_cd,
-                    ip1.market_category as cheapest_category,
-                    ip1.avg_price as cheapest_price,
-                    ip1.min_price,
-                    ip1.max_price,
-                    ip1.record_count
-                FROM item_prices ip1
-                WHERE ip1.avg_price = (
-                    SELECT MIN(ip2.avg_price)
-                    FROM item_prices ip2
-                    WHERE ip2.item_nm = ip1.item_nm 
-                      AND ip2.item_cd = ip1.item_cd
-                )
-            ),
-            all_markets AS (
-                SELECT 
-                    item_nm,
-                    item_cd,
-                    market_category,
-                    avg_price
-                FROM item_prices
             )
             SELECT 
-                cm.item_nm,
-                cm.item_cd,
-                cm.cheapest_category,
-                cm.cheapest_price,
-                cm.min_price,
-                cm.max_price,
-                cm.record_count,
-                COUNT(DISTINCT am.market_category) as total_market_count
-            FROM cheapest_market cm
-            LEFT JOIN all_markets am ON am.item_nm = cm.item_nm AND am.item_cd = cm.item_cd
-            GROUP BY 
-                cm.item_nm, 
-                cm.item_cd, 
-                cm.cheapest_category, 
-                cm.cheapest_price,
-                cm.min_price,
-                cm.max_price,
-                cm.record_count
-            ORDER BY cm.item_nm, cm.cheapest_price
+                res_dt,
+                item_cd,
+                item_nm,
+                market_category,
+                record_count,
+                avg_price,
+                min_price,
+                max_price
+            FROM team3_gold.api13_price_statistics_by_category
+            CROSS JOIN latest_date
+            WHERE res_dt = latest_date.max_date
+            ORDER BY item_nm, market_category, avg_price
             """
 
             with st.spinner("Athena에서 최신 데이터를 불러오는 중..."):
                 try:
                     # Athena 쿼리 실행
-                    df_comparison = execute_athena_query(latest_data_query)
+                    df_data = execute_athena_query(latest_data_query)
 
-                    if len(df_comparison) > 0:
-                        # 세션 상태에 쿼리 결과 저장
-                        st.session_state.eco_df_comparison = df_comparison
-                        st.session_state.eco_query_category_filter = category_filter
-
+                    if len(df_data) > 0:
                         # 최신 데이터 날짜 표시
-                        latest_date_query = (
-                            "SELECT MAX(res_dt) as latest_date FROM team3_gold.api13_price_statistics_by_category"
-                        )
-                        latest_date_df = execute_athena_query(latest_date_query)
-                        latest_date = latest_date_df.iloc[0]["latest_date"] if len(latest_date_df) > 0 else "N/A"
+                        latest_date = df_data["res_dt"].iloc[0] if "res_dt" in df_data.columns else "N/A"
                         st.info(f"📅 최신 데이터 날짜: {latest_date}")
 
                         # 요약 통계
@@ -212,80 +159,101 @@ elif st.session_state.page == "eco":
                         summary_col1, summary_col2, summary_col3 = st.columns(3)
 
                         with summary_col1:
-                            total_items = len(df_comparison)
-                            st.metric("총 품목 수", f"{total_items:,}개")
+                            total_records = len(df_data)
+                            st.metric("총 레코드 수", f"{total_records:,}개")
 
                         with summary_col2:
-                            avg_cheapest = df_comparison["cheapest_price"].mean()
-                            st.metric("평균 최저가", f"{avg_cheapest:,.0f}원")
+                            unique_items = df_data["item_nm"].nunique() if "item_nm" in df_data.columns else 0
+                            st.metric("고유 품목 수", f"{unique_items:,}개")
 
                         with summary_col3:
-                            # 가장 저렴한 market_category 분포
-                            category_counts = df_comparison["cheapest_category"].value_counts()
-                            most_common_category = category_counts.index[0] if len(category_counts) > 0 else "N/A"
-                            st.metric("가장 저렴한 곳", most_common_category)
+                            avg_price = df_data["avg_price"].mean() if "avg_price" in df_data.columns else 0
+                            st.metric("평균 가격", f"{avg_price:,.0f}원")
 
                         st.divider()
 
-                        # 카테고리별로 가장 저렴한 품목 그룹화
-                        st.subheader("💰 품목별 가장 저렴한 구매처")
+                        # market_category를 피봇으로 변환
+                        st.subheader("📊 마트별 가격 비교 (피봇 테이블)")
 
-                        # market_category별로 그룹화
-                        for category in df_comparison["cheapest_category"].unique():
-                            category_items = df_comparison[df_comparison["cheapest_category"] == category].head(20)
+                        try:
+                            # 피봇 테이블 생성: res_dt, item_cd, item_nm을 행으로, market_category를 열로, avg_price를 값으로
+                            df_pivot = df_data.pivot_table(
+                                index=["res_dt", "item_cd", "item_nm"],
+                                columns="market_category",
+                                values="avg_price",
+                                aggfunc="first",  # 중복이 있을 경우 첫 번째 값 사용
+                            ).reset_index()
 
-                            if len(category_items) > 0:
-                                # 카테고리별 헤더
-                                category_emoji = {
-                                    "대형마트": "🏪",
-                                    "생협": "🌱",
-                                    "SSM": "🏬",
-                                    "전문점": "🏪",
-                                    "백화점": "🏢",
-                                    "전통시장": "🏮",
-                                }
-                                emoji = category_emoji.get(category, "📍")
+                            # 컬럼명 정리 (market_category가 컬럼명이 됨)
+                            df_pivot.columns.name = None
 
-                                st.markdown(f"### {emoji} {category}에서 가장 저렴한 품목")
+                            # avg_price의 최대값과 최소값의 차이를 계산하는 컬럼 추가
+                            # market_category 컬럼들만 선택 (res_dt, item_cd, item_nm 제외)
+                            price_columns = [
+                                col for col in df_pivot.columns if col not in ["res_dt", "item_cd", "item_nm"]
+                            ]
 
-                                # 카드 형태로 표시
-                                cols = st.columns(3)
-                                for idx, (_, row) in enumerate(category_items.iterrows()):
-                                    col_idx = idx % 3
-                                    with cols[col_idx]:
-                                        st.markdown(
-                                            f"""
-                                            <div style="
-                                                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                                                padding: 15px;
-                                                border-radius: 10px;
-                                                margin-bottom: 10px;
-                                                color: white;
-                                                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                                            ">
-                                                <h4 style="margin: 0 0 10px 0; color: white;">{row.get("item_nm", "N/A")}</h4>
-                                                <p style="margin: 5px 0; font-size: 24px; font-weight: bold;">
-                                                    {row["cheapest_price"]:,.0f}원
-                                                </p>
-                                                <p style="margin: 5px 0; font-size: 12px; opacity: 0.9;">
-                                                    {category} · 최저: {row["min_price"]:,.0f}원 · 최고: {row["max_price"]:,.0f}원
-                                                </p>
-                                            </div>
-                                            """,
-                                            unsafe_allow_html=True,
+                            if price_columns:
+                                # 각 행별로 가격 컬럼들의 최대값과 최소값 계산 (NaN 제외)
+                                df_pivot["가격차이"] = df_pivot[price_columns].max(axis=1, skipna=True) - df_pivot[
+                                    price_columns
+                                ].min(axis=1, skipna=True)
+
+                                # 가격차이 컬럼을 마지막에 배치하기 위해 컬럼 순서 재정렬
+                                other_columns = [col for col in df_pivot.columns if col != "가격차이"]
+                                df_pivot = df_pivot[[*other_columns, "가격차이"]]
+
+                            st.dataframe(df_pivot, use_container_width=True)
+
+                            # 가격차이가 큰 상위 5개 품목 그래프
+                            if "가격차이" in df_pivot.columns:
+                                st.divider()
+                                st.subheader("📊 가격차이가 큰 상위 5개 품목")
+
+                                # 가격차이 기준으로 내림차순 정렬하고 상위 5개 선택
+                                top_5_items = df_pivot.nlargest(5, "가격차이")
+
+                                # 각 품목별로 그래프 생성
+                                for _, row in top_5_items.iterrows():
+                                    item_nm = row["item_nm"]
+                                    price_diff = row["가격차이"]
+
+                                    st.markdown(f"### {item_nm} (가격차이: {price_diff:,.0f}원)")
+
+                                    # market_category별 가격 데이터 추출
+                                    price_data = {}
+                                    for col in df_pivot.columns:
+                                        if col not in ["res_dt", "item_cd", "item_nm", "가격차이"]:
+                                            price_value = row[col]
+                                            if pd.notna(price_value):
+                                                price_data[col] = price_value
+
+                                    if price_data:
+                                        # 막대 그래프로 표시
+                                        price_df = pd.DataFrame(
+                                            list(price_data.items()), columns=["구매처", "평균가격"]
+                                        )
+                                        price_df = price_df.sort_values("평균가격")
+
+                                        st.bar_chart(price_df.set_index("구매처"))
+
+                                        # 데이터 테이블도 함께 표시
+                                        st.dataframe(
+                                            price_df,
+                                            use_container_width=True,
+                                            hide_index=True,
                                         )
 
-                                if len(category_items) < len(
-                                    df_comparison[df_comparison["cheapest_category"] == category]
-                                ):
-                                    st.caption(
-                                        f"총 {len(df_comparison[df_comparison['cheapest_category'] == category])}개 중 상위 20개만 표시"
-                                    )
+                                    st.markdown("<br>", unsafe_allow_html=True)
 
-                                st.divider()
+                            # 원본 데이터도 탭으로 제공
+                            with st.expander("📋 원본 데이터 보기"):
+                                st.dataframe(df_data, use_container_width=True)
 
-                        st.subheader("📊 전체 데이터")
-                        st.dataframe(df_comparison, use_container_width=True)
+                        except Exception as pivot_error:
+                            st.error(f"피봇 테이블 생성 중 오류: {str(pivot_error)}")
+                            st.info("원본 데이터를 표시합니다.")
+                            st.dataframe(df_data, use_container_width=True)
                     else:
                         st.info("조회된 데이터가 없습니다.")
 
