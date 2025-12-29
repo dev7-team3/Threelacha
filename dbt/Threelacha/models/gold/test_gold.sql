@@ -5,14 +5,14 @@
 ) }}
 
 SELECT 
-    CAST(dt AS DATE) as dt,
+    res_dt,
     year,
     month,
-    product_cls_name,
-    item_name,
+    product_cls_nm,
+    item_nm,
     COUNT(*) as record_count,
     CAST(NOW() AS VARCHAR) as created_at
-FROM {{ source('silver', 'api_1') }}
+FROM {{ source('silver', 'api1') }}
 WHERE year = 2025 AND month = 12
-GROUP BY dt, year, month, product_cls_name, item_name
+GROUP BY res_dt, year, month, product_cls_nm, item_nm
 LIMIT 100

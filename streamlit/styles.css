@@ -1,0 +1,20 @@
+/* 전체 레이아웃 폭 */
+.main .block-container {
+    max-width: 1200px;
+    padding-top: 2rem;
+}
+
+/* 사이드바 배경 */
+section[data-testid="stSidebar"] {
+    background-color: #f7f9fb;
+}
+
+/* 기본 타이포 스케일 */
+h1 { font-size: 1.8rem; }
+h2 { font-size: 1.4rem; }
+h3 { font-size: 1.1rem; }
+
+/* 기본 요소 간격 보정 */
+[data-testid="stVerticalBlock"] > div {
+    gap: 1rem;
+}
