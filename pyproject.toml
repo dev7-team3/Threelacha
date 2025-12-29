@@ -25,6 +25,7 @@ dependencies = [
     "ruff>=0.14.8",
     "pre-commit>=4.5.1",
     "darglint>=1.8.1",
+    "trino>=0.336.0",
 ]
 
 [dependency-groups]
