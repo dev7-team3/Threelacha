@@ -1,4 +1,5 @@
 """지역별 지도 시각화 컴포넌트"""
+
 import folium
 import pandas as pd
 from typing import Optional
@@ -37,16 +38,16 @@ def create_region_map(
     region_data: pd.DataFrame,
     price_column: str = "평균가격",
     region_column: str = "country_nm",
-    selected_item: Optional[str] = None
+    selected_item: Optional[str] = None,
 ) -> folium.Map:
     """지역별 가격 데이터를 지도에 표시합니다.
-    
+
     Args:
         region_data: 지역별 가격 데이터 (country_nm, 평균가격 등 포함)
         price_column: 가격 컬럼명
         region_column: 지역명 컬럼명
         selected_item: 선택된 품목명 (선택사항)
-    
+
     Returns:
         folium.Map: 지도 객체
     """
@@ -54,13 +55,13 @@ def create_region_map(
     m = folium.Map(
         location=[36.5, 127.5],  # 한국 중심 좌표
         zoom_start=7,
-        tiles='cartodbpositrononlylabels'
+        tiles="cartodbpositrononlylabels",
     )
-    
+
     # 데이터가 없으면 기본 지도만 반환
     if region_data.empty:
         return m
-    
+
     # 가격 범위 계산 (색상 구분을 위해)
     if price_column in region_data.columns:
         min_price = region_data[price_column].min()
@@ -70,57 +71,57 @@ def create_region_map(
         min_price = 0
         max_price = 1
         price_range = 1
-    
+
     # 색상 함수 (가격이 낮을수록 초록색, 높을수록 빨간색)
     def get_color(price: float) -> str:
         if pd.isna(price):
-            return 'gray'
+            return "gray"
         normalized = (price - min_price) / price_range
         if normalized < 0.33:
-            return 'green'  # 저렴
+            return "green"  # 저렴
         elif normalized < 0.67:
-            return 'orange'  # 중간
+            return "orange"  # 중간
         else:
-            return 'red'  # 비쌈
-    
+            return "red"  # 비쌈
+
     # 각 지역에 마커 추가
     for _, row in region_data.iterrows():
         region_name = row[region_column]
         price = row.get(price_column, 0)
-        
+
         # 좌표 가져오기
         if region_name in REGION_COORDINATES:
             coords = REGION_COORDINATES[region_name]
         else:
             continue  # 좌표가 없으면 스킵
-        
+
         # 팝업 텍스트 생성 (간소화)
         popup_text = f"""
         <div style="font-family: Arial; width: 180px;">
             <h4 style="margin: 5px 0; font-size: 16px;">{region_name}</h4>
             <p style="margin: 5px 0; font-size: 14px;"><b>가격:</b> {price:,.0f}원</p>
         """
-        
+
         if selected_item:
             popup_text += f"<p style='margin: 5px 0; font-size: 12px; color: #666;'><b>품목:</b> {selected_item}</p>"
-        
+
         popup_text += "</div>"
-        
+
         # 마커 추가 (더 깔끔한 스타일)
         folium.CircleMarker(
             location=coords,
             radius=12 + (price / max_price * 15) if max_price > 0 else 12,  # 가격에 비례한 크기
             popup=folium.Popup(popup_text, max_width=200),
             tooltip=f"{region_name}: {price:,.0f}원",
-            color='white',
+            color="white",
             weight=1.5,
             fill=True,
             fillColor=get_color(price),
-            fillOpacity=0.8
+            fillOpacity=0.8,
         ).add_to(m)
-    
+
     # 범례 추가 (간소화된 스타일)
-    legend_html = f'''
+    legend_html = f"""
     <div style="position: fixed; 
                 bottom: 50px; left: 50px; width: 180px; 
                 background-color: white; border: 1px solid #ccc; border-radius: 5px;
@@ -130,9 +131,9 @@ def create_region_map(
     <p style="margin: 4px 0;"><span style="display: inline-block; width: 12px; height: 12px; background-color: orange; border-radius: 50%; margin-right: 6px;"></span> 중간</p>
     <p style="margin: 4px 0;"><span style="display: inline-block; width: 12px; height: 12px; background-color: red; border-radius: 50%; margin-right: 6px;"></span> 비쌈</p>
     </div>
-    '''
+    """
     m.get_root().html.add_child(folium.Element(legend_html))
-    
+
     return m
 
 
@@ -141,10 +142,10 @@ def render_region_map(
     price_column: str = "평균가격",
     region_column: str = "country_nm",
     selected_item: Optional[str] = None,
-    height: int = 500
+    height: int = 500,
 ):
     """Streamlit에서 지역별 지도를 렌더링합니다.
-    
+
     Args:
         region_data: 지역별 가격 데이터
         price_column: 가격 컬럼명
@@ -155,64 +156,63 @@ def render_region_map(
     if region_data.empty:
         st.info("지도에 표시할 데이터가 없습니다.")
         return
-    
+
     # 지도 생성
     m = create_region_map(region_data, price_column, region_column, selected_item)
-    
+
     # Streamlit에 지도 표시
     st_folium(m, width=700, height=height, returned_objects=[])
 
 
 def render_selected_item_region_map(conn, date_filter=None, category_filter=None):
     """선택된 품목의 지역별 지도를 표시하는 함수.
-    
+
     Args:
         conn: Trino 연결 객체
         date_filter: 날짜 필터
         category_filter: 카테고리 필터
     """
-    if not (st.session_state.get("show_region_map", False) and 
-            "selected_item_nm" in st.session_state and 
-            "selected_kind_nm" in st.session_state):
+    if not (
+        st.session_state.get("show_region_map", False)
+        and "selected_item_nm" in st.session_state
+        and "selected_kind_nm" in st.session_state
+    ):
         return
-    
+
     st.divider()
     st.subheader(f"🗺️ {st.session_state.selected_item_nm}({st.session_state.selected_kind_nm}) 지역별 가격 지도")
-    
+
     # 지역별 데이터 조회
-    region_stats_query = get_region_stats_query(
-        date_filter=date_filter,
-        category_filter=category_filter
-    )
-    
+    region_stats_query = get_region_stats_query(date_filter=date_filter, category_filter=category_filter)
+
     with st.spinner("지역별 데이터를 불러오는 중..."):
         try:
             df_region = execute_query(region_stats_query, conn)
-            
+
             if len(df_region) > 0:
                 # 선택된 품목 필터링
                 df_filtered = df_region[
-                    (df_region['item_nm'] == st.session_state.selected_item_nm) & 
-                    (df_region['kind_nm'] == st.session_state.selected_kind_nm)
+                    (df_region["item_nm"] == st.session_state.selected_item_nm)
+                    & (df_region["kind_nm"] == st.session_state.selected_kind_nm)
                 ]
-                
+
                 if len(df_filtered) > 0:
                     # 지역별 평균 가격으로 그룹화
-                    df_region_agg = df_filtered.groupby('country_nm').agg({
-                        '평균가격': 'mean'
-                    }).reset_index()
-                    
+                    df_region_agg = df_filtered.groupby("country_nm").agg({"평균가격": "mean"}).reset_index()
+
                     # 지도 표시
                     render_region_map(
                         df_region_agg,
                         price_column="평균가격",
                         region_column="country_nm",
-                        selected_item=f"{st.session_state.selected_item_nm}({st.session_state.selected_kind_nm})"
+                        selected_item=f"{st.session_state.selected_item_nm}({st.session_state.selected_kind_nm})",
                     )
-                    
+
                     # 데이터 테이블도 함께 표시
-                    st.dataframe(df_filtered[['country_nm', '평균가격', '최저가격', '최고가격']], use_container_width=True)
-                    
+                    st.dataframe(
+                        df_filtered[["country_nm", "평균가격", "최저가격", "최고가격"]], use_container_width=True
+                    )
+
                     # 닫기 버튼
                     if st.button("지도 닫기", key="close_map_btn"):
                         st.session_state.show_region_map = False
@@ -220,7 +220,9 @@ def render_selected_item_region_map(conn, date_filter=None, category_filter=None
                         st.session_state.selected_kind_nm = None
                         st.rerun()
                 else:
-                    st.info(f"{st.session_state.selected_item_nm}({st.session_state.selected_kind_nm})에 대한 지역별 데이터가 없습니다.")
+                    st.info(
+                        f"{st.session_state.selected_item_nm}({st.session_state.selected_kind_nm})에 대한 지역별 데이터가 없습니다."
+                    )
                     if st.button("지도 닫기", key="close_map_btn_no_data"):
                         st.session_state.show_region_map = False
                         st.session_state.selected_item_nm = None

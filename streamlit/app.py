@@ -1,21 +1,25 @@
-import streamlit as st
 import os
-import pandas as pd
 from pathlib import Path
-from components.price_cards import price_card
+
+import streamlit as st
+
+from components.channel_cards import render_channel_comparison_sections
+from components.eco_page import render_eco_content
 from components.extra_panel import render_extra_panel
+from components.price_cards import price_card
+from components.region_map import render_selected_item_region_map
 from components.season_selector import render_season_selector
+from data.athena_connection import get_athena_config
+from data.queries.channel_queries import get_channel_comparison_query
 from data.sample_data import get_price_summary, get_popular_items
 from data.trino_connection import execute_query, get_trino_connection
-from data.queries.channel_queries import get_channel_comparison_query
-from components.channel_cards import render_channel_comparison_sections
-from components.region_map import render_region_map, render_selected_item_region_map
 
 
 def load_css():
     base_path = Path(__file__).parent
     with open(base_path / "styles.css") as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
 
 load_css()
 
@@ -24,10 +28,7 @@ popular_items = get_popular_items()
 conn = get_trino_connection()
 
 
-st.set_page_config(
-    page_title="농산물 가격 대시보드",
-    layout="wide"
-)
+st.set_page_config(page_title="농산물 가격 대시보드", layout="wide")
 
 if "page" not in st.session_state:
     st.session_state.page = "main"
@@ -68,7 +69,6 @@ if st.session_state.page == "main":
 
     center, right = st.columns([3, 1])
 
-    
     # -------------------------
     # 중앙 영역
     # -------------------------
@@ -77,15 +77,15 @@ if st.session_state.page == "main":
 
         with c1:
             st.subheader("가장 싸요")
-            price_card(summary["cheap"], '#eaf2fb')
+            price_card(summary["cheap"], "#eaf2fb")
 
         with c2:
             st.subheader("가장 비싸요")
-            price_card(summary["expensive"], '#fff8e1')
+            price_card(summary["expensive"], "#fff8e1")
 
         with c3:
             st.subheader("이건 어때요")
-            price_card(summary["suggest"], '#eaf7ea')
+            price_card(summary["suggest"], "#eaf7ea")
 
         st.divider()
 
@@ -96,7 +96,6 @@ if st.session_state.page == "main":
 
         with bottom_right:
             st.info("※ 이 영역에 지도 / 차트가 들어갈 예정입니다.")
-
 
     # -------------------------
     # 우측 영역 (추가 기능)
@@ -109,35 +108,19 @@ if st.session_state.page == "main":
 # 친환경 페이지
 # =================================================
 elif st.session_state.page == "eco":
-
     st.title("친환경 살펴보기")
     st.divider()
 
-    col1, col2 = st.columns(2)
+    # Athena 연결 사용 - 항상 최신 데이터 자동 조회
+    use_athena_data = st.checkbox("Athena 데이터베이스 연결 사용", value=True)
 
-    with col1:
-        st.subheader("생협이 더 저렴해요!")
-        st.info("참깨 500g\n전통시장 15,548원 / 대형마트 23,717원")
-        st.info("굴 1kg\n전통시장 20,056원 / 대형마트 27,706원")
-
-    with col2:
-        st.subheader("대형마트가 더 저렴해요!")
-        st.info("배추 10개\n전통시장 34,384원 / 대형마트 27,165원")
-        st.info("사과 10개\n전통시장 29,636원 / 대형마트 27,511원")
-
-    st.divider()
-    st.subheader("친환경 농산물 소비 추이 (예시)")
-    st.line_chart({
-        "2019": [62, 45, 28, 31, 60, 80],
-        "2020": [72, 50, 30, 36, 75, 85],
-    })
+    render_eco_content(use_athena_data)
 
 
 # =================================================
 # 유통업체 페이지
 # =================================================
 elif st.session_state.page == "dist":
-
     st.title("일반 농수산물 살펴보기")
     st.divider()
 
@@ -160,13 +143,13 @@ elif st.session_state.page == "dist":
             with col3:
                 # 버튼을 아래로 정렬하기 위한 빈 공간 추가
                 st.markdown("<br>", unsafe_allow_html=True)
-                query_button = st.button("데이터 조회", type="primary", key="dist_query_button", use_container_width=True)
+                query_button = st.button(
+                    "데이터 조회", type="primary", key="dist_query_button", use_container_width=True
+                )
 
             # 유통 vs 전통 비교 쿼리 생성
             comparison_query = get_channel_comparison_query(
-                date_filter=date_filter,
-                category_filter=category_filter,
-                limit=None
+                date_filter=date_filter, category_filter=category_filter, limit=None
             )
 
             if query_button:
@@ -179,8 +162,8 @@ elif st.session_state.page == "dist":
                             st.session_state.df_comparison = df_comparison
                             st.session_state.query_date_filter = date_filter
                             st.session_state.query_category_filter = category_filter
-                            
-                                                        # 요약 통계
+
+                            # 요약 통계
                             st.subheader("📈 요약 통계")
                             summary_col1, summary_col2, summary_col3 = st.columns(3)
 
@@ -195,17 +178,16 @@ elif st.session_state.page == "dist":
                             with summary_col3:
                                 avg_diff = df_comparison["가격차이"].mean()
                                 st.metric("평균 가격 차이", f"{avg_diff:,.0f}원")
-                                
-                            
+
                             st.divider()
-                            
+
                             render_channel_comparison_sections(df_comparison)
-                            
+
                             # 선택된 품목이 있으면 지역별 지도 표시
                             render_selected_item_region_map(
                                 conn,
                                 date_filter=st.session_state.get("query_date_filter"),
-                                category_filter=st.session_state.get("query_category_filter")
+                                category_filter=st.session_state.get("query_category_filter"),
                             )
 
                             st.divider()
@@ -217,11 +199,11 @@ elif st.session_state.page == "dist":
                     except Exception as e:
                         st.error(f"데이터 조회 중 오류 발생: {str(e)}")
                         st.info("💡 Trino 서버가 실행 중인지 확인하세요. (docker-compose up -d trino)")
-                            
+
             # 쿼리 버튼이 눌러지지 않았지만 이전에 조회한 데이터가 있고 지도 표시 요청이 있는 경우
             elif "df_comparison" in st.session_state and len(st.session_state.df_comparison) > 0:
                 df_comparison = st.session_state.df_comparison
-                
+
                 # 요약 통계
                 st.subheader("📈 요약 통계")
                 summary_col1, summary_col2, summary_col3 = st.columns(3)
@@ -237,18 +219,18 @@ elif st.session_state.page == "dist":
                 with summary_col3:
                     avg_diff = df_comparison["가격차이"].mean()
                     st.metric("평균 가격 차이", f"{avg_diff:,.0f}원")
-                
+
                 st.divider()
-                
+
                 render_channel_comparison_sections(df_comparison)
-                
+
                 # 선택된 품목이 있으면 지역별 지도 표시
                 render_selected_item_region_map(
                     conn,
                     date_filter=st.session_state.get("query_date_filter"),
-                    category_filter=st.session_state.get("query_category_filter")
+                    category_filter=st.session_state.get("query_category_filter"),
                 )
-                
+
                 st.divider()
                 st.subheader("📊 유통 vs 전통 가격 비교")
                 st.dataframe(df_comparison, use_container_width=True)
@@ -283,10 +265,21 @@ elif st.session_state.page == "dist":
 with st.sidebar:
     st.markdown("---")
     st.markdown("### 연결 정보")
-    st.info(f"""
-    **Trino 설정:**
-    - Host: {os.getenv("TRINO_HOST", "localhost")}
-    - Port: {os.getenv("TRINO_PORT", "8082")}
-    - Catalog: hive
-    - Schema: gold
-    """)
+
+    # 현재 페이지에 따라 다른 연결 정보 표시
+    if st.session_state.page == "eco":
+        database, workgroup = get_athena_config()
+        st.info(f"""
+        **Athena 설정:**
+        - Database: {database}
+        - WorkGroup: {workgroup}
+        - Region: {os.getenv("AWS_REGION", "ap-northeast-2")}
+        """)
+    else:
+        st.info(f"""
+        **Trino 설정:**
+        - Host: {os.getenv("TRINO_HOST", "localhost")}
+        - Port: {os.getenv("TRINO_PORT", "8082")}
+        - Catalog: hive
+        - Schema: gold
+        """)
