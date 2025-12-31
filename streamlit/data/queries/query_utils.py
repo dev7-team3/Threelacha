@@ -29,3 +29,8 @@ def build_where_clause(
     
     return ""
 
+def build_where_country_clause(country_filter: Optional[str] = None) -> str:
+    clauses = ["1=1"]  # 기본 조건
+    if country_filter:
+        clauses.append(f"country_nm = '{country_filter}'")
+    return "WHERE " + " AND ".join(clauses)
