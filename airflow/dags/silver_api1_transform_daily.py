@@ -8,6 +8,7 @@ from typing import Any, Dict, List
 from airflow.exceptions import AirflowSkipException
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from airflow.sdk import dag, task
+from config.constants import BUCKET_NAME
 from connection_utils import get_storage_conn_id
 from metadata_loader_utils import MetadataLoader
 import pandas as pd
@@ -16,17 +17,11 @@ from preprocessing import add_date_features, clean_price
 
 logger = logging.getLogger("airflow.task")
 
-# ---------------------------------------------------------
-# 상수 정의
-# ---------------------------------------------------------
-BUCKET_NAME = "team3-batch"
+# 연결정보
 CONN_ID = get_storage_conn_id()
 
-# ---------------------------------------------------------
-# 유틸리티 함수
-# ---------------------------------------------------------
 
-
+# 파일경로에서 메타데이터 추출
 def extract_metadata_from_path(file_path: str) -> Dict[str, str]:
     """파일 경로에서 메타데이터 추출
 
@@ -56,8 +51,8 @@ def extract_metadata_from_path(file_path: str) -> Dict[str, str]:
 
 @dag(
     dag_id="silver_api1_transform_daily",
-    schedule="0 2 * * *",
-    start_date=pendulum.datetime(2025, 12, 11, tz="UTC"),
+    schedule=None,
+    start_date=pendulum.datetime(2025, 12, 11),
     catchup=False,
     max_active_runs=10,
     default_args={"owner": "jungeun_park"},

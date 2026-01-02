@@ -25,7 +25,7 @@ API1_ACTION = "dailyPriceByCategoryList"
 @dag(
     dag_id="raw_api1_collect_daily",
     description="KAMIS API1 일별 품목 카테고리별 가격 데이터 수집",
-    schedule="0 1 * * *",  # KST 10:00
+    schedule=None,
     start_date=pendulum.datetime(2025, 12, 23),
     catchup=False,
     tags=["KAMIS", "api-1", "raw", "daily"],
