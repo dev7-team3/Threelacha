@@ -174,6 +174,7 @@ def upload_parquet_to_s3(
 # ============================================================
 
 
+# df 기준이 아닌 json의 record 기준 처리
 def clean_price(value: Any) -> Optional[float]:
     """가격 데이터 정제 (쉼표 제거, 빈 값/'-' 처리)
 
