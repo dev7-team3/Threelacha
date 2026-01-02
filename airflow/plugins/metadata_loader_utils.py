@@ -132,13 +132,13 @@ def generate_api1_params() -> Iterator[Dict[str, Optional[str]]]:
 
 def generate_api10_params() -> Iterator[Dict[str, str]]:
     """
-    API10 파라미터 조합 생성 (도매 주요 광역시만)
+    API10 파라미터 조합 생성 (소매 지역)
 
     Yields:
         {country_code}
-        - country_code: 도매 주요 광역시 코드 (5개)
+        - country_code: 소매 지역 코드 (24개)
     """
-    countries = MetadataLoader.get_country_codes(wholesale_only=True)
+    countries = MetadataLoader.get_country_codes(wholesale_only=False)
 
     logger.debug(f"API10 파라미터 생성: {len(countries)} 지역")
 
