@@ -16,7 +16,7 @@ def get_price_drop_top3_query(
     # limit: Optional[int] = 4
 ) -> str:
     """
-    전일 대비 가격 하락율이 높은 상품 리스트 쿼리를 생성합니다.
+    전일 대비 가격 하락율이 높은 상품 리스트 쿼리를 생성
     
     Args:
         country_filter: 지역 필터
@@ -49,7 +49,7 @@ def get_price_rise_top3_query(
     country_filter: Optional[str] = None,
 ) -> str:
     """
-    전일 대비 가격 상승률이 높은 상품 리스트 쿼리를 생성합니다.
+    전일 대비 가격 상승률이 높은 상품 리스트 쿼리를 생성
     
     Args:
         country_filter: 지역 필터
@@ -74,4 +74,23 @@ def get_price_rise_top3_query(
     ORDER BY ranking
     """
     
+    return query.strip()
+
+
+def get_price_region_rate_query(
+    country_filter: Optional[str] = None,
+) -> str:
+    """ 지역별 상승/하락/유지 개수 집계 쿼리 """
+    where_sql = build_where_country_clause(country_filter)
+
+    query = f"""
+    SELECT
+        country_nm,
+        rise_count,
+        drop_count,
+        keep_count
+    FROM hive.gold.mart_price_region_count
+    {where_sql}
+    """
+
     return query.strip()
