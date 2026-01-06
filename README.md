@@ -3,9 +3,9 @@
 본 레포지토리는 **AWS 기반 데이터 파이프라인을 로컬 환경에서 최대한 유사하게 재현**하기 위해 구성된 개발용 데이터 플랫폼입니다.<br>
 실제 AWS 비용을 사용하지 않고도, S3–Glue–Athena–DBT-Airflow 중심의 아키텍처를 그대로 로컬에서 검증하는 것을 목표로 합니다.<p>
 이와 같은 로컬 AWS 유사 환경을 선제적으로 구성한 배경은 다음과 같습니다.
-- 첫째, Glue Data Catalog와 Athena 등 비교적 생소한 AWS 서비스 도입에 앞서, 로컬에서 유사한 아키텍처를 직접 구성함으로써 전체 데이터 흐름과 인프라 구조에 대한 이해도를 높이고 설계 단계에서의 오류를 사전에 차단하기 위함입니다.
-- 둘째, 데이터 수집부터 정제·집계·마트 생성까지의 전 과정을 로컬 환경에서 단계적으로 프로토타입 구현함으로써, 비즈니스 로직과 데이터 처리 흐름을 가시화하고 핵심 파이프라인 로직을 조기에 검증하기 위함입니다.
-- 마지막으로, 프로젝트 종료 이후 클라우드 자원 반납 상황을 고려하여, 언제든 재구축이 가능한 Portable한 개발 환경을 마련함으로써 운영 지속성과 복구 가용성을 확보하고자 하였습니다.
+- 첫째, Glue Data Catalog와 Athena와 같이 비교적 생소한 AWS 서비스 도입에 앞서, 로컬 환경에 유사한 아키텍처를 선제적으로 구성함으로써 전체 데이터 흐름과 인프라 구조에 대한 이해도를 높이고, 설계 단계에서 발생할 수 있는 오류와 리스크를 사전에 식별·완화하고자 하였습니다.
+- 둘째, 데이터 수집부터 정제·집계·마트 생성에 이르는 전 과정을 로컬 환경에서 단계적으로 프로토타입 구현함으로써, 비즈니스 로직과 데이터 처리 흐름을 가시화하고 핵심 파이프라인 로직의 타당성을 조기에 검증하고자 하였습니다.
+- 마지막으로, 프로젝트 종료 이후 클라우드 자원 반납 상황을 고려하여, 언제든 재구축이 가능한 Portable한 개발 환경을 마련함으로써, 운영 지속성과 복구 가용성을 확보하고자 하였습니다.
 
 ---
 ## ✨ 핵심 특징
@@ -33,7 +33,26 @@
 git clone git@github.com:dev7-team3/Threelacha.git
 cd Threelacha
 ```
-### 2) 환경 변수 설정
+
+### 2) 로컬 Python 개발 환경 준비 (uv)
+```
+# uv 설치 (macOS / Linux)
+curl -Ls https://astral.sh/uv/install.sh | bash
+
+# uv 설치 (Windows powershell)
+irm https://astral.sh/uv/install.ps1 | iex
+
+# 설치 확인
+uv --version
+
+# 가상환경 생성
+uv venv
+
+# 의존성 설치 (lock 파일 기준)
+uv sync
+```
+
+### 3) 환경 변수 설정
 ```.env.example``` 파일을 복사하여 ```.env``` 파일을 생성합니다.
 ```
 cp .env.example .env
@@ -41,24 +60,23 @@ cp .env.example .env
 필요에 따라 ```.env``` 파일의 아래 항목들을 환경에 맞게 수정합니다.<br>
 ```CERT_KEY``` 및 ```CERT_ID``` 항목을 제외하고는, 변경하지 않아도 ```docker-compse.yaml``` 설정된 기본값으로 실행가능합니다.
 ```
-AIRFLOW_DB_USER=<airflow_user>
-AIRFLOW_DB_PASSWORD=<airflow_password>
-AIRFLOW_DB_NAME=<airflow_db>
+# 변경 불가 항목
+AIRFLOW_ENV=local
 
-_AIRFLOW_WWW_USER_USERNAME=<admin_user>
-_AIRFLOW_WWW_USER_PASSWORD=<admin_password>
-
-_MINIO_WWW_USER_USERNAME=<minio_admin>
-_MINIO_WWW_USER_PASSWORD=<minio_password>
-
+# 필수 변경 항목
+# ---------------------------------------------------------
+# KAMIS Open API 인증 정보
+# ---------------------------------------------------------
 CERT_KEY=<YOUR_KAMIS_API_KEY>
 CERT_ID=<YOUR_KAMIS_API_ID>
 ```
-### 3) Docker Compose 실행
+
+### 4) Docker Compose 실행
 ```
 docker compose up -d
 ```
-### 4) 서비스 접속 확인
+
+### 5) 서비스 접속 확인
 | 서비스              | 주소                                             |
 | ---------------- | ---------------------------------------------- |
 | Airflow Web UI   | [http://localhost:8080](http://localhost:8080) |
@@ -108,7 +126,7 @@ THREELACHA/
 │   └── styles.css              # UI 스타일 정의
 │
 ├── docker-compose.yaml         
-├── .env.example                # 환경 변수 설정 샘플
+├── .env.example                # 환경 변수 템플릿
 ├── pyproject.toml              # 프로젝트 메타데이터 및 의존성 정의
 ├── uv.lock                     # 패키지 버전 고정 파일 (uv)
 ├── README.md
