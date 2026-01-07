@@ -186,20 +186,46 @@ THREELACHA/
 # 컨테이너 접속
 docker exec -it minio-mc sh
 
-# Local MinIO 등록
+# ------------------------------------------------------------
+# Local MinIO 연결정보 alias 등록
+#  - 로컬 Docker 환경에서 실행 중인 MinIO 서버를 mc CLI에 등록
+#  - 이후 'minio'라는 별칭(alias)으로 해당 서버를 참조 가능
+#
+# 명령어 규칙:
+#   mc alias set <alias_name> <endpoint>:<port> <access_key> <secret_key>
+# ------------------------------------------------------------
 mc alias set minio http://minio:9000 admin adminadmin
 
-# AWS S3 등록
+# ------------------------------------------------------------
+# AWS S3 연결정보 alias 등록
+#  - AWS S3를 mc CLI에 alias로 등록
+#  - IAM Access Key / Secret Key는 환경변수로 주입 (직접입력도 가능)
+#
+# 사용되는 alias:
+#   - s3 : AWS S3를 지칭하는 별칭
+#
+# endpoint:
+#   - https://s3.ap-northeast-2.amazonaws.com
+#     (AWS 서울 리전 S3 엔드포인트)
+# ------------------------------------------------------------
 mc alias set s3 https://s3.ap-northeast-2.amazonaws.com \
   $AWS_ACCESS_KEY_ID $AWS_SECRET_ACCESS_KEY
 
-# minio 폴더 확인
+# MinIO 버킷 목록 조회 (연결 확인)
 mc ls minio
 
-# mc mirror dry-run : 실질적인 이관없이 변경사항만 확인하기
+# ------------------------------------------------------------
+# mc mirror dry-run
+# 규칙: mc mirror --dry-run <source> <target>
+#  - 실제 데이터 이관 없이 변경/이관 대상만 출력
+# ------------------------------------------------------------
 mc mirror --dry-run minio/threelacha/raw/api-13 s3/team3-batch/raw/api-13
 
-# 데이터 이관
+# ------------------------------------------------------------
+# mc mirror (실제 이관)
+# 규칙: mc mirror <source> <target>
+#  - source 데이터를 target으로 동기화
+# ------------------------------------------------------------
 mc mirror minio/threelacha/raw/api-13 s3/team3-batch/raw/api-13
 
 ```
