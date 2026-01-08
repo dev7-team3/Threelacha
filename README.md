@@ -146,19 +146,22 @@ THREELACHA/
 - AWS S3와 동일한 API 제공
 - Raw / Silver / Gold 레이어 데이터 저장
 - Trino, Jupyter(Spark), Airflow에서 동일한 방식으로 접근
-📌 API: 9000
+
+📌 API: 9000   
 📌 Console: http://localhost:9001
 
 ### 3. Hive Metastore (Glue Catalog 대체)
 - PostgreSQL 기반 메타스토어
 - Trino / Spark / dbt에서 공통 메타데이터 사용
 - Glue Data Catalog와 거의 동일한 역할 수행
+
 📌 Metastore Thrift: 9083
 
 ### 4. Trino (Athena 대체)
 - Hive Metastore + MinIO 연동
 - Interactive SQL Query Engine
 - dbt, BI, 분석 쿼리 용도
+
 📌 포트: Web UI / API: http://localhost:8082
 
 ### 5. dbt
@@ -171,6 +174,7 @@ THREELACHA/
 - 실행 시, 토큰입력 비활성화 설정
 - MinIO 연동 설정 포함
 - 데이터 검증 및 탐색 용도
+
 📌 Notebook: http://localhost:8888
 
 ---
