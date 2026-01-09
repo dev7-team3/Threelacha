@@ -36,19 +36,27 @@ cd Threelacha
 
 ### 2) 로컬 Python 개발 환경 준비 (uv)
 ```
-# uv 설치 (macOS / Linux)
+# 1. uv 설치
+# macOS
 curl -Ls https://astral.sh/uv/install.sh | bash
 
-# uv 설치 (Windows powershell)
+# Windows powershell
 irm https://astral.sh/uv/install.ps1 | iex
 
-# 설치 확인
+# 2. 설치 확인
 uv --version
 
-# 가상환경 생성
+# 3. 가상환경 생성
 uv venv
 
-# 의존성 설치 (lock 파일 기준)
+# 4. 가상환경 활성화 
+# macOS
+source .venv/bin/activate
+
+# Windows powershell
+.venv\Scripts\Activate.ps1
+
+# 5. 의존성 설치 (lock 파일 기준)
 uv sync
 ```
 
