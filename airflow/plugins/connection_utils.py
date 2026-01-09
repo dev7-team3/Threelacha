@@ -26,7 +26,7 @@ CONNECTION_CONFIG = {
 # -------------------------------------------------------------------------
 # Environment Resolver
 # -------------------------------------------------------------------------
-DEFAULT_ENV = "aws"
+DEFAULT_ENV = "local"
 
 
 def get_current_env() -> str:

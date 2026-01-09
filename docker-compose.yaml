@@ -89,6 +89,14 @@ x-airflow-common:
     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
     # The following line can be used to set a custom config file, stored in the local config folder
     AIRFLOW_CONFIG: '/opt/airflow/config/airflow.cfg'
+    # docker-compose.yml
+
+    # Airflow 커넥션 정보 등록
+    # MinIO 커넥션 : minio_conn
+    AIRFLOW_CONN_MINIO_CONN: '{"conn_type":"aws","login":"${_MINIO_WWW_USER_USERNAME}","password":"${_MINIO_WWW_USER_PASSWORD}","extra":{"endpoint_url":"http://minio:9000"}}'
+    # Trino 커넥션 : trino_conn
+    AIRFLOW_CONN_TRINO_CONN: 'trino://admin@trino:8080/hive'
+  
   volumes:
     - ${AIRFLOW_PROJ_DIR:-.}/airflow/dags:/opt/airflow/dags        # [CHANGED] 볼륨 mount 위치 변경
     - ${AIRFLOW_PROJ_DIR:-.}/airflow/logs:/opt/airflow/logs        # [CHANGED] 볼륨 mount 위치 변경
